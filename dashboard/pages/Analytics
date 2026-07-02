@@ -1,0 +1,71 @@
+import streamlit as st
+import pandas as pd
+
+st.set_page_config(
+    page_title="Analytics Dashboard",
+    layout="wide"
+)
+
+st.title("📊 Analytics Dashboard")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        "Total Movies",
+        "1682"
+    )
+
+with col2:
+    st.metric(
+        "Total Users",
+        "943"
+    )
+
+with col3:
+    st.metric(
+        "Total Ratings",
+        "100000"
+    )
+
+st.subheader("Top Genres")
+
+genre_df = pd.DataFrame({
+    "Genre": [
+        "Drama",
+        "Comedy",
+        "Action",
+        "Sci-Fi",
+        "Romance"
+    ],
+    "Count": [
+        420,
+        350,
+        280,
+        210,
+        180
+    ]
+})
+
+st.bar_chart(
+    genre_df.set_index("Genre")
+)
+
+st.subheader("Recommendation Acceptance Rate")
+
+acceptance_df = pd.DataFrame({
+    "Algorithm": [
+        "Genre-Based",
+        "Because You Watched",
+        "Collaborative"
+    ],
+    "Acceptance Rate": [
+        62,
+        68,
+        74
+    ]
+})
+
+st.bar_chart(
+    acceptance_df.set_index("Algorithm")
+)
