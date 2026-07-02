@@ -1,0 +1,188 @@
+import streamlit as st
+from utils.database import run_query
+
+st.title("🎬 Recommendation Lab")
+
+st.write(
+    """
+    Generate movie recommendations using different SQL-based
+    recommendation strategies.
+    """
+)
+
+user_id = st.number_input(
+    "Enter User ID",
+    min_value=1,
+    value=1
+)
+
+method = st.selectbox(
+    "Recommendation Method",
+    [
+        "Genre Based",
+        "Similar Users",
+        "Trending"
+    ]
+)
+
+if st.button("Generate Recommendations"):
+
+
+    if method == "Genre Based":
+
+        query = f"""
+        WITH favourite_genres AS
+        (
+            SELECT mg.genre_id
+            FROM ratings r
+            JOIN movie_genres mg
+                ON r.movie_id = mg.movie_id
+            WHERE r.user_id = {user_id}
+            GROUP BY mg.genre_id
+            ORDER BY AVG(r.rating) DESC
+            LIMIT 3
+        )
+
+        SELECT
+            m.title,
+            ROUND(AVG(r.rating)::numeric,2) AS score,
+            'Matches your favourite genres' AS reason
+
+        FROM movies m
+
+        JOIN ratings r
+            ON m.movie_id = r.movie_id
+
+        JOIN movie_genres mg
+            ON m.movie_id = mg.movie_id
+
+        WHERE mg.genre_id IN
+        (
+            SELECT genre_id
+            FROM favourite_genres
+        )
+
+        AND m.movie_id NOT IN
+        (
+            SELECT movie_id
+            FROM ratings
+            WHERE user_id = {user_id}
+        )
+
+        GROUP BY m.movie_id, m.title
+
+        ORDER BY score DESC
+
+        LIMIT 10
+        """
+
+
+    elif method == "Similar Users":
+
+        query = f"""
+        WITH similar_users AS
+        (
+            SELECT
+                r2.user_id,
+                COUNT(*) AS common_movies
+
+            FROM ratings r1
+
+            JOIN ratings r2
+                ON r1.movie_id = r2.movie_id
+
+            WHERE r1.user_id = {user_id}
+
+            AND r2.user_id <> {user_id}
+
+            AND ABS(r1.rating - r2.rating) <= 1
+
+            GROUP BY r2.user_id
+
+            ORDER BY common_movies DESC
+
+            LIMIT 20
+        )
+
+        SELECT
+            m.title,
+            ROUND(AVG(r.rating)::numeric,2) AS score,
+            'Users similar to you liked this' AS reason
+
+        FROM ratings r
+
+        JOIN movies m
+            ON r.movie_id = m.movie_id
+
+        WHERE r.user_id IN
+        (
+            SELECT user_id
+            FROM similar_users
+        )
+
+        AND m.movie_id NOT IN
+        (
+            SELECT movie_id
+            FROM ratings
+            WHERE user_id = {user_id}
+        )
+
+        GROUP BY m.movie_id, m.title
+
+        ORDER BY score DESC
+
+        LIMIT 10
+        """
+
+    else:
+
+        query = """
+        SELECT
+            m.title,
+            ROUND(AVG(r.rating)::numeric,2) AS score,
+            'Currently trending among all users' AS reason
+
+        FROM ratings r
+
+        JOIN movies m
+            ON r.movie_id = m.movie_id
+
+        GROUP BY m.movie_id, m.title
+
+        ORDER BY COUNT(*) DESC
+
+        LIMIT 10
+        """
+
+    results = run_query(query)
+
+    st.subheader("Recommendations")
+
+    if len(results) == 0:
+
+        st.warning(
+            "No recommendations found for this user."
+        )
+
+    else:
+
+        for _, row in results.iterrows():
+
+            st.markdown(f"### 🎬 {row['title']}")
+
+            st.write(
+                f"⭐ Recommendation Score: {row['score']}"
+            )
+
+            st.write(
+                f"💡 Why Recommended: {row['reason']}"
+            )
+
+            st.divider()
+
+    with st.expander("View SQL Query"):
+
+        st.code(
+            query,
+            language="sql"
+        )
