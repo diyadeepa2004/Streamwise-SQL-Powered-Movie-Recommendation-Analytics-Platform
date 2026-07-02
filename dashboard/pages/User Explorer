@@ -1,0 +1,46 @@
+import streamlit as st
+from utils.database import run_query
+
+st.title("👤 User Explorer")
+
+user_id = st.number_input(
+    "Enter User ID",
+    min_value=1,
+    value=1
+)
+
+if st.button("Analyze User"):
+
+    ratings_query = f"""
+    SELECT COUNT(*) AS ratings_given
+    FROM ratings
+    WHERE user_id = {user_id}
+    """
+
+    genre_query = f"""
+    SELECT g.genre_name,
+           AVG(r.rating) AS avg_rating
+    FROM ratings r
+    JOIN movie_genres mg
+        ON r.movie_id = mg.movie_id
+    JOIN genres g
+        ON mg.genre_id = g.genre_id
+    WHERE r.user_id = {user_id}
+    GROUP BY g.genre_name
+    ORDER BY avg_rating DESC
+    LIMIT 5
+    """
+
+    ratings_df = run_query(ratings_query)
+    genre_df = run_query(genre_query)
+
+    st.subheader("User Statistics")
+
+    st.metric(
+        "Ratings Given",
+        int(ratings_df.iloc[0]["ratings_given"])
+    )
+
+    st.subheader("Top Genres")
+
+    st.dataframe(genre_df)
