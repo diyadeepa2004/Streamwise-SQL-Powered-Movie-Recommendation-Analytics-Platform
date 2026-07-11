@@ -1,4 +1,4 @@
-# 🎬 StreamWise – SQL-Powered Movie Recommendation Analytics Platform
+# StreamWise – SQL-Powered Movie Recommendation Analytics Platform
 
 ## Overview
 
